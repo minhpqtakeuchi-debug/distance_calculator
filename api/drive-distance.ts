@@ -1,4 +1,4 @@
-export const config = { runtime: "edge" };
+export const config = { runtime: "edge" }; // tells Vercel this is an Edge Function
 
 function json(obj: any, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -47,6 +47,8 @@ async function routeORS(a: {lat:number,lon:number}, b: {lat:number,lon:number}, 
 export default async function handler(req: Request) {
   try {
     const url = new URL(req.url);
+
+    // optional shared token
     const token = process.env.PUBLIC_TOKEN;
     if (token && url.searchParams.get("token") !== token) {
       return json({ error: "unauthorized" }, 401);

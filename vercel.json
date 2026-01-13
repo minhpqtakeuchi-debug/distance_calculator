@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "functions": {
-    "api/drive-distance.ts": { "runtime": "edge" }
-  },
-  "routes": [
-    { "src": "/api/drive-distance", "dest": "/api/drive-distance.ts" }
-  ]
-}

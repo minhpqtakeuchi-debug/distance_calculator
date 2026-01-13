@@ -1,5 +1,9 @@
 {
   "name": "distance-edge",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^18.19.0"
+  }
 }

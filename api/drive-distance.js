@@ -1,20 +1,20 @@
-export const config = { runtime: "edge" }; // tells Vercel this is an Edge Function
+export const config = { runtime: "edge" };
 
-function json(obj: any, status = 200) {
+function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: { "Content-Type": "application/json" }
   });
 }
 
-function parseLatLon(s?: string) {
+function parseLatLon(s) {
   if (!s) return null;
   const m = s.match(/\s*(-?\d+(\.\d+)?)\s*[, ]\s*(-?\d+(\.\d+)?)\s*$/);
   if (!m) return null;
   return { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
 }
 
-async function geocode(text: string) {
+async function geocode(text) {
   const u = new URL("https://nominatim.openstreetmap.org/search");
   u.searchParams.set("q", text);
   u.searchParams.set("format", "jsonv2");
@@ -26,16 +26,16 @@ async function geocode(text: string) {
   return { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) };
 }
 
-async function resolvePoint(s: string) {
+async function resolvePoint(s) {
   const asCoord = parseLatLon(s);
   return asCoord ?? geocode(s);
 }
 
-async function routeORS(a: {lat:number,lon:number}, b: {lat:number,lon:number}, key?: string) {
+async function routeORS(a, b, key) {
   if (!key) throw new Error("ORS key missing");
   const r = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
     method: "POST",
-    headers: { "Authorization": key, "Content-Type": "application/json" },
+    headers: { Authorization: key, "Content-Type": "application/json" },
     body: JSON.stringify({ coordinates: [[a.lon, a.lat], [b.lon, b.lat]] })
   });
   if (!r.ok) throw new Error("ORS upstream");
@@ -44,12 +44,11 @@ async function routeORS(a: {lat:number,lon:number}, b: {lat:number,lon:number}, 
   return { km: s.distance / 1000, minutes: Math.round(s.duration / 60) };
 }
 
-export default async function handler(req: Request) {
+export default async function handler(req) {
   try {
     const url = new URL(req.url);
 
-    // optional shared token
-    const token = process.env.PUBLIC_TOKEN;
+    const token = (globalThis.process && process.env && process.env.PUBLIC_TOKEN) || undefined;
     if (token && url.searchParams.get("token") !== token) {
       return json({ error: "unauthorized" }, 401);
     }
@@ -61,7 +60,8 @@ export default async function handler(req: Request) {
     }
 
     const [A, B] = await Promise.all([resolvePoint(start), resolvePoint(end)]);
-    const { km, minutes } = await routeORS(A, B, process.env.ORS_KEY);
+    const orsKey = (globalThis.process && process.env && process.env.ORS_KEY) || undefined;
+    const { km, minutes } = await routeORS(A, B, orsKey);
 
     return json({
       distance_km: Math.round(km * 10) / 10,
@@ -69,7 +69,7 @@ export default async function handler(req: Request) {
       source: "openrouteservice",
       confidence: 0.98
     });
-  } catch (e: any) {
-    return json({ error: e?.message || String(e) }, 502);
+  } catch (e) {
+    return json({ error: (e && e.message) || String(e) }, 502);
   }
 }
